@@ -298,53 +298,47 @@ def get_current_weather(city, api_key):
         return None, None
 
 # Crop prediction function
-def crop_prediction(input_data):
-    input_data_as_numpy_array = np.asarray(input_data)
-    input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
-    predicted_crop = loaded_model.predict(input_data_reshaped)[0]
-    return predicted_crop
-
-# Streamlit app
 def main():
-    st.title("🌱 Crop & Fertilizer Recommendation System")
-    st.write("Enter the soil and weather details:")
+    st.set_page_config(page_title="Crop & Fertilizer Recommendation", layout="wide")
+    add_bg_from_url("https://source.unsplash.com/1600x900/?farm,agriculture")
 
-    # Input fields for features
-    n = st.slider("🌾 Nitrogen", min_value=0, max_value=140, value=30)
-    p = st.slider("🌱 Phosphorous", min_value=5, max_value=145, value=30)
-    k = st.slider("🌿 Potassium", min_value=5, max_value=205, value=30)
-    ph = st.number_input("⚖️ Soil pH", min_value=3.50, max_value=9.93, value=5.00, format="%.2f")
-    rain = st.number_input("🌧 Rainfall (mm)", min_value=20.21, max_value=298.56, value=25.00, format="%.2f")
-
-    # Fetch current temperature and humidity
+    st.markdown("<h1 style='text-align: center; color: white;'>🌱 Crop & Fertilizer Recommendation System</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: white;'>Enter the soil and weather details:</h3>", unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        n = st.slider("🌾 Nitrogen", min_value=0, max_value=140, value=30)
+        p = st.slider("🌱 Phosphorous", min_value=5, max_value=145, value=30)
+        k = st.slider("🌿 Potassium", min_value=5, max_value=205, value=30)
+    
+    with col2:
+        ph = st.number_input("⚖️ Soil pH", min_value=3.50, max_value=9.93, value=5.00, format="%.2f")
+        rain = st.number_input("🌧 Rainfall (mm)", min_value=20.21, max_value=298.56, value=25.00, format="%.2f")
+    
     api_key = "a348c64893ec6f58d83dd2e60cbadc58"  # Replace with your OpenWeatherMap API key
     city = "Coimbatore"
     temp, hum = get_current_weather(city, api_key)
 
     if temp is not None and hum is not None:
-        st.write(f"🌡 **Current Temperature:** {temp}°C")
-        st.write(f"💧 **Current Humidity:** {hum}%")
-
-        if st.button('🔍 Recommend Crop & Fertilizer'):
-            # Predict crop
-            recommended_crop = crop_prediction([n, p, k, temp, hum, ph, rain])
-            # Get fertilizer recommendation
-            recommended_fertilizer = fertilizer_dict.get(recommended_crop, "No recommendation available")
-
-            # Display recommendations
-            st.success(f"🌾 **Recommended Crop:** {recommended_crop.upper()}")
-            st.subheader(f"🧪 Recommended Fertilizers for {recommended_crop.capitalize()}:")
-
-            for fertilizer in recommended_fertilizer:
-                st.markdown(f"**🔹 {fertilizer['name']}**: {fertilizer['description']}")
-
-            st.subheader("🌾 **Crop Guidance:**")
-
-            for point in crop_guidance[recommended_crop]:
-                st.write(point)
-
+        st.success(f"🌡 **Current Temperature:** {temp}°C")
+        st.success(f"💧 **Current Humidity:** {hum}%")
     else:
         st.error("Unable to fetch current weather data. Please enter manually.")
+    
+    if st.button('🔍 Recommend Crop & Fertilizer'):
+        recommended_crop = crop_prediction([n, p, k, temp, hum, ph, rain])
+        recommended_fertilizer = fertilizer_dict.get(recommended_crop, [])
+        
+        st.markdown(f"<h2 style='color: yellow;'>🌾 Recommended Crop: {recommended_crop.upper()}</h2>", unsafe_allow_html=True)
+        
+        st.subheader(f"🧪 Recommended Fertilizers for {recommended_crop.capitalize()}")
+        for fertilizer in recommended_fertilizer:
+            st.markdown(f"**🔹 {fertilizer['name']}**: {fertilizer['description']}")
+        
+        st.subheader("🌾 Crop Guidance:")
+        for point in crop_guidance[recommended_crop]:
+            st.write(f"✅ {point}")
 
 if __name__ == "__main__":
     main()
