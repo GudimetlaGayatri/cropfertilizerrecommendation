@@ -2,13 +2,9 @@ import streamlit as st
 import numpy as np
 import pickle
 import requests
-import os
 
 # Load the trained model
 loaded_model = pickle.load(open('crop_recomendation_model.pkl', 'rb'))
-
-
-# Check if the model file exists
 
 # Fertilizer recommendations for each crop
 fertilizer_dict = {
@@ -298,6 +294,13 @@ def get_current_weather(city, api_key):
         return None, None
 
 # Crop prediction function
+def crop_prediction(input_data):
+    input_data_as_numpy_array = np.asarray(input_data)
+    input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
+    predicted_crop = loaded_model.predict(input_data_reshaped)[0]
+    return predicted_crop
+
+# Streamlit app
 def main():
     st.title("🌱 Crop & Fertilizer Recommendation System")
     st.write("Enter the soil and weather details:")
