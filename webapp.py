@@ -6,7 +6,8 @@ import requests
 # Load the trained model
 loaded_model = pickle.load(open('crop_recomendation_model.pkl', 'rb'))
 
-# Fertilizer recommendations for each crop
+# Fertilizer and crop guidance dictionaries remain unchanged
+
 fertilizer_dict = {
     'rice': [
         {"name": "Urea", "description": "Boosts vegetative growth, apply in 2-3 split doses."},
@@ -277,7 +278,6 @@ crop_guidance = {
 
 
 
-
 # Function to fetch current weather data
 def get_current_weather(city, api_key):
     base_url = "http://api.openweathermap.org/data/2.5/weather?"
@@ -288,59 +288,53 @@ def get_current_weather(city, api_key):
         main = data["main"]
         temperature = main["temp"]
         humidity = main["humidity"]
-        return temperature, humidity
+        weather_desc = data["weather"][0]["description"]
+        return temperature, humidity, weather_desc
     else:
-        st.error("City Not Found")
-        return None, None
+        return None, None, None
 
-# Crop prediction function
-def crop_prediction(input_data):
-    input_data_as_numpy_array = np.asarray(input_data)
-    input_data_reshaped = input_data_as_numpy_array.reshape(1, -1)
-    predicted_crop = loaded_model.predict(input_data_reshaped)[0]
-    return predicted_crop
+# Streamlit UI
+st.title("🌾 Crop Recommendation System")
 
-# Streamlit app
-def main():
-    st.title("🌱 Crop & Fertilizer Recommendation System")
-    st.write("Enter the soil and weather details:")
+# Inputs from user
+st.subheader("Enter details for crop prediction:")
+n = st.slider("🌾 Nitrogen", min_value=0, max_value=140, value=30)
+p = st.slider("🌱 Phosphorous", min_value=5, max_value=145, value=30)
+k = st.slider("🌿 Potassium", min_value=5, max_value=205, value=30)
+ph = st.number_input("⚖️ Soil pH", min_value=3.50, max_value=9.93, value=5.00, format="%.2f")
+rain = st.number_input("🌧 Rainfall (mm)", min_value=20.21, max_value=298.56, value=25.00, format="%.2f")
+temperature = st.number_input("Temperature (°C):", format="%.1f")
+humidity = st.number_input("Humidity (%):", min_value=0.0, max_value=100.0, step=0.1)
 
-    # Input fields for features
-    n = st.slider("🌾 Nitrogen", min_value=0, max_value=140, value=30)
-    p = st.slider("🌱 Phosphorous", min_value=5, max_value=145, value=30)
-    k = st.slider("🌿 Potassium", min_value=5, max_value=205, value=30)
-    ph = st.number_input("⚖️ Soil pH", min_value=3.50, max_value=9.93, value=5.00, format="%.2f")
-    rain = st.number_input("🌧 Rainfall (mm)", min_value=20.21, max_value=298.56, value=25.00, format="%.2f")
 
-    # Fetch current temperature and humidity
-    api_key = "a348c64893ec6f58d83dd2e60cbadc58"  # Replace with your OpenWeatherMap API key
-    city = "Coimbatore"
-    temp, hum = get_current_weather(city, api_key)
+city = st.text_input("Enter your city to fetch current weather conditions:")
 
-    if temp is not None and hum is not None:
-        st.write(f"🌡 **Current Temperature:** {temp}°C")
-        st.write(f"💧 **Current Humidity:** {hum}%")
+# Fetch and display current weather if city is entered
+api_key = "a348c64893ec6f58d83dd2e60cbadc58"
+if st.button("Fetch Weather Data") and city:
+    temp, humid, desc = get_current_weather(city, api_key)
+    if temp is not None:
+        st.success(f"Current Temperature: {temp}°C\nHumidity: {humid}%\nWeather: {desc}")
+    else:
+        st.error("City not found! Please check the city name.")
 
-        if st.button('🔍 Recommend Crop & Fertilizer'):
-            # Predict crop
-            recommended_crop = crop_prediction([n, p, k, temp, hum, ph, rain])
-            # Get fertilizer recommendation
-            recommended_fertilizer = fertilizer_dict.get(recommended_crop, "No recommendation available")
+# Crop recommendation prediction
+if st.button("Predict Best Crop"):
+    input_features = np.array([[n, p, k, temperature, humidity, ph, rain]])
+    prediction = loaded_model.predict(input_features)
+    crop = prediction[0]
+    st.success(f"Recommended Crop: **{crop}** 🌱")
 
-            # Display recommendations
-            st.success(f"🌾 **Recommended Crop:** {recommended_crop.upper()}")
-            st.subheader(f"🧪 Recommended Fertilizers for {recommended_crop.capitalize()}:")
+    # Display crop-specific guidance and fertilizers
+    if crop in fertilizer_dict and crop in crop_guidance:
+        st.subheader(f"{crop.capitalize()} Guidance & Fertilizers")
+        st.markdown("### 🌱 **Crop Guidance:**")
+        for tip in crop_guidance[crop]:
+            st.markdown(tip)
 
-            for fertilizer in recommended_fertilizer:
-                st.markdown(f"**🔹 {fertilizer['name']}**: {fertilizer['description']}")
-
-            st.subheader("🌾 **Crop Guidance:**")
-
-            for point in crop_guidance[recommended_crop]:
-                st.write(point)
+        st.markdown("### 🧪 **Recommended Fertilizers:**")
+        for fertilizer in fertilizer_dict[crop]:
+            st.markdown(f"**{fertilizer['name']}:** {fertilizer['description']}")
 
     else:
-        st.error("Unable to fetch current weather data. Please enter manually.")
-
-if __name__ == "__main__":
-    main()
+        st.warning("No detailed guidance available for this crop.")
